@@ -1,2 +1,143 @@
 <!DOCTYPE html>
-<html><body><p>GlassSpeed</p></body></html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=640, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Speedometer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 640px;
+      height: 480px;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .speed-value {
+      font-size: 160px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -4px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+      min-width: 3ch;
+      text-align: center;
+    }
+
+    .speed-value.warning {
+      color: #ff9500;
+    }
+
+    .speed-value.danger {
+      color: #ff3b30;
+    }
+
+    .unit {
+      font-size: 32px;
+      font-weight: 400;
+      color: #888;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .status {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 18px;
+      color: #555;
+    }
+
+    .status.acquiring {
+      color: #888;
+    }
+
+    .status.error {
+      color: #ff3b30;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="speed-value" id="speed">--</div>
+    <div class="unit">km/h</div>
+  </div>
+  <div class="status acquiring" id="status">GPS 取得中...</div>
+
+  <script>
+    const speedEl = document.getElementById('speed');
+    const statusEl = document.getElementById('status');
+
+    function updateSpeed(kmh) {
+      const rounded = Math.round(kmh);
+      speedEl.textContent = rounded;
+
+      speedEl.className = 'speed-value';
+      if (rounded >= 100) speedEl.classList.add('danger');
+      else if (rounded >= 80) speedEl.classList.add('warning');
+    }
+
+    function onPosition(position) {
+      const mps = position.coords.speed;
+
+      if (mps === null || mps < 0) {
+        speedEl.textContent = '0';
+        statusEl.textContent = '';
+        statusEl.className = 'status';
+        return;
+      }
+
+      const kmh = mps * 3.6;
+      updateSpeed(kmh);
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+    }
+
+    function onError(err) {
+      speedEl.textContent = '--';
+      speedEl.className = 'speed-value';
+
+      const messages = {
+        1: 'GPS: 許可が必要です',
+        2: 'GPS: 位置情報を取得できません',
+        3: 'GPS: タイムアウトしました',
+      };
+      statusEl.textContent = messages[err.code] || 'GPS エラー';
+      statusEl.className = 'status error';
+    }
+
+    if (!navigator.geolocation) {
+      statusEl.textContent = 'GPS 非対応ブラウザ';
+      statusEl.className = 'status error';
+    } else {
+      navigator.geolocation.watchPosition(onPosition, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000,
+      });
+    }
+  </script>
+</body>
+</html>
